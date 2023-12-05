@@ -12,6 +12,7 @@ Both of these constellations exist in 2 spatial dimensions and transmit 4 or 3 b
 However, if for every pair of 16QAM and 8QAM points we allow a choice of whether to send the 16QAM first or the 8QAM point first we can extract an 8th bit from this scheme. In this way we can represent the valid codewords in this new hybrid constellation as first picking O (blue) or X (red), then picking any point of that colour on the first graph then picking any point of the same colour on the second graph.
 
 ![16,8 QAM hybrid constellation][16_8_hybrid]
+
 [16_8_hybrid]: ./img_hybrid.png
 
 This has the same throughput as the original 16QAM constellation but requires less power to transmit. I will also show that the minimum symbol distance is also still 2 even though it may not seem obvious at first glance.
@@ -19,6 +20,7 @@ This has the same throughput as the original 16QAM constellation but requires le
 Imagine we transmit the symbol [1,1,0,4], that is the codeword with x=1,y=1 on the left graph and x=0,y=4 on the right graph. If we experience a noise vector of [+0.7, +0.6, +0.3, +0.1] which has a euclidean distance of about 0.975, we get the black dot as shown on the following graph:
 
 ![point shifted by noise, appears closer to a valid point on the left graph but is still closer to the original one][noise_example]
+
 [noise_example]: ./img_noise_example.png
 
 Even though on the left graph the point is closer to the point at [2,2], you can only chose that if you also use a blue point on the right graph. the vector from the valid codeword [2,2,5,1] to the green point is [-0.3,-0.4,-0.7, -0.9] which has a length of about 1.245, further than the original point. Any pair of neighbouring codewords will either differ in a single dimension by +-2 and be equal in the other 3 dimensions, or in all 4 dimensions by +-1. 
@@ -75,7 +77,7 @@ Then suppose our noise vector is [0, +0.6, +0.1, +0.6, 0, +0.6] resulting in the
 
 If the block decoder had enough information it could determine the second one is closer because the +0.1 in the 3rd dimension but both of these codewords are further away than the transmitted message:
 
->   (2,3  ,3  ,3  ,2,3)
+>   (2,3  ,3  ,3  ,2,3) 
 > - (2,2.6,2.1,2.6,2,2.6)
 > = (0,0.4,0.9,0.4,0,0.4) length is sqrt(3*0.4^2 + 0.9^2) = sqrt(1.29)
 
