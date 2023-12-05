@@ -5,6 +5,7 @@ Tadhg's thesis work
 Consider a 16QAM and a rectangular 8QAM constellation. In this document all constellations will be represented with strictly non-negative coordinates so that distance vectors have + and - while coordinate points are always written without the sign. So the constellations in question would look like this:
 
 ![16QAM and 8QAM constellations][16QAM8QAM]
+
 [16QAM8QAM]: ./img_16QAM8QAM.png
 
 Both of these constellations exist in 2 spatial dimensions and transmit 4 or 3 bits respectively. If we composed a system where we alternate between using the constellations we might expect to get a net throughput of 7 bits every 4 spatial dimensions.
