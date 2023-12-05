@@ -1,0 +1,29 @@
+
+
+Talk to Ian, ask about normalization and also how to write journal paper and motivation
+
+HOW TO FINISH MASTERS, is a lot less structured and need help defining a structure
+
+- what is end point, if the thing doesn't work the way I want where do I go from there?
+
+- how to keep self on track / schedule when I have no idea how long specific things will take.
+- What kinds of resources for citations/usefulness
+- who else I should talk to about requirements
+- I have so much trouble reading papers and not sure how much is because it is hard and how much because of ADHD and focus.
+- I have a technique to simulate messages for AWGN that works at constant time wrt SNR, is that useful as it's own thing?
+- what constitutes a masters? How do I know whether I've gotten there or how close I am? - is there a defense of some kind?
+
+- if still unsure let him know
+
+- interested in building resources, either software libraries or learning tools.
+
+- spending more time academically, in lab, interacting with other people
+
+
+- alternative noise models
+- grasmanian, not knowing channel?
+
+
+set goals and restrictions on play time until work is done
+try to work on times I am effective at.
+extended drawers max reach

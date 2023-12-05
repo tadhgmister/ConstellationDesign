@@ -1,0 +1,6 @@
+
+!pyscript = |> guix shell python -- python3 -B %f > %o |> 
+
+
+: foreach img_*.py |> !pyscript |> %B.png
+: make_html.py |> !pyscript |> index.html

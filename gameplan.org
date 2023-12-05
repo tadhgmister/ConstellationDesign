@@ -1,0 +1,6 @@
+
+- write code to generate constellation in same manner as 4600 project
+- write code to generate noise vectors to symbols directly and do decision device based on closest valid symbol
+- each message can contain effectively one symbol for simplicity, generate BER graph
+
+- then extension is to generate a noise figure, apply it to all valid symbols and see which ones create errors

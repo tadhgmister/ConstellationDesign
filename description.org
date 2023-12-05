@@ -1,0 +1,93 @@
+
+The constellation is designed such that it starts with some PAM or QAM constellation, and duplicate each point to a power of 2 new points to add extra bits. The goal is that the minimum symbol distance will remain consistent with the original QAM distance, so other than additional energy to transmit the extra bits the error rate shouldn't be affected by much.
+
+With this design, if the QAM constellation is set to a distance of 2 we can treat the extra encoding as operating in modulo 2.
+
+We use the modulo 2 for convinience and we will also make the new points have strictly non-negative coordinates so we analyse the space from 0 to 2, we will recenter the points and rescale the whole constellation before evaluating the performance.
+
+In 2D (a square) the point furthest from all the corners is the direct center of (1,1) which is sqrt(2) units away from the corners, this is less than 2 so no viable solutions exist.
+In 3D we put right in the middle of a cube (1,1,1) which is sqrt(3) is still not enough
+in 4D in the center of the hypercube (1,1,1,1) the point is exactly 2 units away from each corner so this becomes a valid solution
+
+So we could imagine a generating matrix that looks like:
+
+- 2 0 0 0
+- 0 2 0 0
+- 0 0 2 0
+- 0 0 0 2
+- 1 1 1 1
+
+to encode 5 bits into 4 dimensions (assuming we use 4QAM/2PAM as the basis, we could use a higher original modulation equivelently.
+
+In 5D there is not much more we can do but in 6D we are able to fit a tetrahedron (4 points)
+- 0 0 0 0 0 0
+- 1 1 1 1 0 0
+- 1 1 0 0 1 1
+- 0 0 1 1 0 0
+
+the 111100 is the same vector used in 4d and the other one of 110011 can be added to it modulo 2 to get that point and the last one so we can encode 8 bits with 6 dimensions using this technique
+
+In 7D we can add the basis vector 1010101 to transmit 10 bits in 7D, this means we are duplicating each QAM point to 8 viable positions, a structure that is 8 points that are all directly adjacent to every other point requires at minimum 7D to exist (much like a tetrahedron needs 3D to exist) so any higher we expect not all the points to be densely adjacent to each other.
+
+In 8D we can add the basis 00001111 which functions much like the original 4D and higher dimensions repeat this pattern:
+
+- 11110000...
+- 110011000...
+- 1010101000...
+- 00001111000...
+- 000011001100...
+- 0000101010100...
+- 00000000111100...
+
+Where this is all applied modulo 2, this continues to generate new points that every nearest neighbour is still at least 2 units away as there are at least 4 dimensions which differ by 1 unit each.
+
+** higher modulation
+
+A similar structure exists in higher dimensions, with 16 dimensions you can bias each coordinate by 1/2 or by 0 and end up finding a point that is equally distant from all nearby points similar to how we found one in 4d. with higher dimensions we can reuse similar patterns
+
+
+- 1111 1111 1111 1111 0000 0000 0000 0000
+- 1111 1111 0000 0000 1111 1111 0000 0000
+- 1111 0000 1111 0000 1111 0000 1111 0000
+- 1100 1100 1100 1100 1100 1100 1100 1100
+- 1010 1010 1010 1010 1010 1010 1010 1010
+- ------------------  1111 1111 1111 1111 etc.
+
+And this repeats, this can be added to the same parity bits replacing them with 1/2 or 0 and add with the rest still using modulo 2.
+I have confirmed this generates valid constellation points that still respect the minimum distance between symbols of 2 but I don't know that this structure is necessarily optimal.
+
+I do know that shouldn't add too much decoding complexity though, other than possible issues with finding efficient "grep maps" (deciding bit patterns for each codeword that minimizes bit error for the most likely symbol errors)
+each layer of the decoding should be relatively independent in terms of finding valid codewords,
+
+We should expect any power of 4 to have similar possible structures with further refined sizes, the next one needing 64 dimensions where we can add one extra bit by optionally bias all 64 dimensions by +-1/8 (0 or 1/4)
+
+** Bit rates
+the first order modulation provides an extra 3 bits every 4 dimensions except for the first few, specifically the number of bits per dimension is 3/4 - 2/N where as long as N is a multiple of 4 this is exact, otherwise it is an upper limit.
+
+The second order has 5 permutations instead of 3 that can repeat every 16 dimensions so it provides an extra 5/16 - 4/N bits per dimension which is exact as long as N is a multiple of 16 otherwise this is the upper limit.
+
+This pattern would theoretically repeat, for a modulation level 's' it provides up to: `(1+2s)/4^s - 2s/N` bits per dimension, so as the dimensionality increases, missing the first few becomes insignificant. as N->inf and we layer all possible modulations on top of each other:
+
+ExtraBitsPerDims(max_s,N) = sum[s=1 to max_s] ((1+2s)/4^s - 2s/N)
+
+some values that feel significant for the sake of comparison / simulation:
+
+ExtraBitsPerDims(1, 8) = 1/2
+ExtraBitsPerDims(1,24) = 2/3
+ExtraBitsPerDims(2,96) = 1
+ExtraBitsPerDims(inf,inf) = 1+2/9
+
+For the case where max_s->inf and N->inf, if we consider layering this just on 4QAM/2PAM which naturally fits our pattern by setting s=0, we get a max throughput of 2.22222 bits per dimension as the constellation increases in complexity
+However, given that just using 2 layers of modulation gets all the way up to 2 at 96 dimensions, the higher order modulation schemes seem not likely to be useful unless there is a better way to represent them than the pattern I found, which is quite possible.
+
+
+** simulation
+
+The way I am currently evaluating the constellation is by generating a number of noise vectors and using that direction and a given symbol as the original message, I find all the possible symbols that could be hit depending on the noise magnitude and finding all the boundaries where the mis-decoding would happen. I then calculate based on gausian/chi distrobution and the SNR to calculate the theoretical BER based on that. Averaging over several thousand different direction vectors gives a heuristic for the real BER rate that scaled only by how many directions are simulated and not depending on SNR (in fact getting more SNR points for the graph doesn't change runtime complexity at all)
+
+The algorithm to find all possible decoded points along a ray is shaky at best, it is based on the idea of a bisection search where it first uses the original symbol, uses a point very far away along the ray and decodes that as the furthest possible point and then tries to find a point on the ray that is equal distance from both those points.
+
+If that point decodes to one of the 2 we already found the algorithm is done, but if there is another point in the constellation that is closer that becomes a 3rd point and we need to recheck the space between it and the original point, and the space between it and the furthest point. this repeats recursively until every boundary we identify is closest to points we have already found.
+This algorithm works well in the cases I've tested although the point along a ray that is equal distance from 2 arbitrary points is not, in general, guarenteed to be between those points on the ray. I would want to prove that with the constraints of the points always being closest to points we are searching with is enough to prove it is always between and therefore will guarentee to converge.
+
+My simulation is currently not totally consistent with normalization and increasing or decreasing the energy of the constellation causes the performance to worsen.

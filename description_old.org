@@ -1,0 +1,443 @@
+
+* tadhg's constellation / error correction code thingy
+
+** motivating example
+
+Imagine a block code which is 2I, that is each bit is mapped to it's
+own spatial dimension where a 0 maps to 0 and bit 1 maps to the
+coordinate 2.  This corresponds to an uncoded 2-PAM scheme where the
+points are each 2 units away from each other.
+
+For instance the bit sequence [0,0,1,1] would map to [0,0,2,2] in spacial coordinates, very straight forward.
+
+Now imagine placing a point in our constellation that is all 1s, with only a
+single dimension it will be 1 unit away from both {0} and {2}, in 2d the
+point [1,1[ is sqrt(2) units away from any corners of the square. In 3D
+we get sqrt(3) and in 4D we get sqrt(4)=2. So in 4 dimensions the
+point in the center of a hypercube is equally far away from the
+corners as the corners are away from each other.
+
+This provides an oppertunity to use a generating matrix that looks like this:
+
+2 0 0 0
+0 2 0 0
+0 0 2 0
+0 0 0 2
+1 1 1 1
+
+corresponding to a 5bit in 4 dimensions constellation where the
+euclidean distance between any 2 codewords is at least 2 units so we'd
+expect a comparable symbol error rate to the original 2PAM scheme
+(except that it is a slightly higher power usage so error rate will
+increase a little from that)
+
+If we increase the dimensions further to 6 we can find 4 points that are each equally distanced from each other and from the corners:
+000000
+111100
+110011
+001111
+
+Which can lead to similar "biasing" logic with the basis vectors of
+"111100" and "110011" where they are combined modulo 2, as we increase
+the number of dimensions and find more bias vectors which differ from
+each other by 4 elements we can extend this logic continuously
+
+** how to interpret this biasing
+
+if we consider just a single dimension, it will have a bit mapped with
+2PAM which shifts the point by 2 units, and a biasing bit which
+further shifts it by 1 unit this means we can treat the point as a
+whole as a 4PAM symbol, if we ignore grey mapping we'd write the
+direct bit to the more significant bit and biassing to least
+significant but the grey mapping would look like this:
+
+- 00 0+unbiased
+- 01 0+biased
+- 11 1+unbiased
+- 10 1+biased
+
+this shows that a detector using 4PAM we can recover the 'uncoded' bit
+as the first bit, while the biassing is expressed as the parity of the
+bits, where even parity=unbiased and odd parity=biased.  The detector
+should be able to use the parity info into the correction system, and
+will output a list of dimensions that it thinks were in error.  When
+the error is detected we want to move to the nearest valid codeword
+however with only the 4PAM information there are 2 valid symbols that
+are equally distant.  So we will actually decode using 8PAM and use
+the least significant bit only to detect which symbol was closer,
+using grey mapping the 3rd bit is a 1 whenever flipping the 2nd bit is
+a closer symbol while it is 0 when the more significant bit should be
+flipped (although that is only needed when we are in the middle of the
+map, if we have 100 or 000 we need to handle it slightly differently)
+
+
+** block encoder idea
+So the whole scheme can be described as a part of the message being
+mapped directly to the 2PAM while the rest of the message get fed
+through a modulo 2 binary block encoder, lets just consider the block
+encoder for now
+
+In 8 dimensions we can get this generating matrix to encode an extra 4 bits into the 8 dimensions:
+- 1111 0000
+- 1100 1100
+- 1010 1010
+- 0000 1111
+
+Which interestingly enough also corresponds to the parity check
+matrix, it can only be the case in 8 dimensions as this is the only
+case where the number of "information bits" and "parity bits" (this is
+probably not making sense yet, didn't introduce the mapping to 4PAM)
+is equal
+
+increasing further in dimensions, the last 3 rows can be repeated
+continuously to form larger symbols, for instance the 12 dimensional
+case is:
+- 1111 ---- ----
+- 1100 1100 ----
+- 1010 1010 ----
+- 0000 1111 ----
+- ---- 1100 1100
+- ---- 1010 1010
+- ---- 0000 1111
+
+ignoring the first one, we get 3 extra bits every 4 dimensions so the
+bits per dimension will be 3/4 - 2/N where N is the number of
+dimensions. this is equality when N is a multiple of 4 and is a close
+upper bound otherwise.
+
+
+this structure makes the biasing logic function very similarly to a convolutional code (I think)
+
+every time we add a dimension we end up either adding an information
+bit or a parity bit (effectively) but I haven't yet figured out how to
+generate the parity matrix from the generating matrix in general
+yet. nor how the decoder should function
+
+** higher order maps
+
+In the same way we can bias 4 dimensions by a distance of 1 to get a
+total euclidean distance of 2, we naturally expect a similar logic to
+work in 16 dimensions where each dimension is biased by 1/2.  this
+makes a higher order biasing scheme that can be layered on top of the
+above scheme to further increase the bit rate in the same number of
+dimensions.
+
+This also corresponds perfectly to increasing the decoded QAM
+modulation a second time and undoing the grey mapping the least
+significant bit of the uncoded data can be fed into this second
+decoder.  but how does this version scale? well the first order scheme
+ends up finding permutations of 4 ones in 4*2=8 dimensions where each
+vector differed in 4 positions (shared exactly half or none of the
+bits) and this ends up being very similar, we find there is a
+repeating pattern of 5 permutations in 32 dimensions that can be
+layered on top of each other
+
+1111 1111 1111 1111 0000 0000 0000 0000
+1111 1111 0000 0000 1111 1111 0000 0000
+1111 0000 1111 0000 1111 0000 1111 0000
+1100 1100 1100 1100 1100 1100 1100 1100
+1010 1010 1010 1010 1010 1010 1010 1010
+------------------- 1111 1111 1111 1111 etc.
+
+This can be repeated every 16 dimensions to ensure at least half of
+the bits are different for each basis vector, I'm not sure if a more
+efficient way to pack the 16 bits exists but this follows a very
+similar pattern to the 4d case and generalizes to any order of this
+scheme 's' where there will be 1+2s basis vectors every 4^s
+dimensions, except for the first 2s since they need to span twice the
+number of dimensions to get started.
+
+And since we can layer each order on top of each other we'd expect the
+
+ExtraBitPerDims(max_s, N) = sum[s=1 to max_s] ( (1+2s)/4^s - 2s/N)
+
+and the limit as max_s->infinity and N -> infinity is 1 + 2/9.  we
+also notice that setting s=0 very naturally produces 2PAM / BPSK so if
+we changed the sum to start at 0 we'd get a maximum bits/dim of
+2.2222222 although based on the way it was constructed we should be
+able to layer the biasing on any QAM constellation or compose it with
+itself as described below.  But in the case where we use 2PAM and
+biasing we'd expect to get at most 2.2222 bits per dimension with this
+scheme, slightly higher than 4PAM or 16QAM
+
+some notable values:
+ExtraBitsPerDims(1, 8) = 1/2
+ExtraBitsPerDims(1,24) = 2/3
+ExtraBitsPerDims(2,96) = 1
+
+the other way to analyze the case where it is added with some PAM rate
+y bits/dim (where 1 is 2-PAM, 2 is 4-PAM etc), in which case the
+decoder would be of bits/dim of s+y equivelent_rate(y,max_s,N) =
+(y+ExtraBitsPerDims(max_s,N))/(s+y)
+
+since s+1 is the number of bits that get decoded to represent the valid codewords (for s=0 it is directly 2PAM, for s=1 it is 4PAM etc)
+
+so:
+equivelent_rate(1,1, 8) = 3/4
+equivelent_rate(1,1,24) = 5/6
+equivelent_rate(1,1,inf)= 7/8 (absolute maximum with only first order decoding)
+equivelent_rate(1,2,96) = 2/3
+equivelent_rate(2,2,96) = 3/4
+equivelent_rate(1,2,inf)= 11/16 (absolute maximum with second order decoding, is lower than first one)
+
+the case for 2,2,96 would have 2/3 bits of the message go directly to
+a 4PAM (16QAM) map uncoded while the other 1/3 get modulated and get
+decoded based on 256QAM for a equivelent rate of uncoded 64QAM (this
+sentence is rediculously confusing, I want to try to draw equivelence
+to other systems but not sure exactly how)
+
+** self composition
+
+Above is described adding the biasing of several orders to a static
+PAM or QAM map, however another option exists which is to compose it
+with itself in the same way that PAM is scaled.
+
+What I mean by this is one way to define QAM constellations is to
+start with a "seed" map of QPSK then to get the next order, double the
+size of the map then add the original seed to each point.  This
+effectively multiplies the power by 4 then adds the original power
+every time you increase the number of bits:
+
+bit* | power (compared to seed)
+1    | 1
+2    | 5
+3    | 21
+4    | 85
+
+so 256QAM or equivelently 16PAM uses 85 times the power for equal
+symbol distance compared to QPSK/2PAM and for it, it gains 4 times the
+bits per dimension.
+
+We can compose the biassing mapping with itself in the same way
+instead of adding it to an existing PAM the 96 dimensional case which
+is equivelent to 1 bit per dimension uses only 5/16 times the power of
+QPSK due to the tighter packing, if we want an equivelent throughput
+of 4PAM
+
+~~it is more efficient to add it to 2PAM for a total energy of
+1+5/16 = 21/16 instead of this composition 5*5/16 = 25/16 however for
+higher order it becomes more efficient resulting in only 21*5/16 =
+105/16 instead of 5+5/16 = 86/16..... nope nevermind for some reason I
+thought it'd scale better~~
+
+I don't think self composition is ever actually more beneficial than
+adding to existing QAM which is actually really good news, it might
+work out that there is another self composition that is smarter but
+right now I don't think it's going to make sense to do further scaling
+of the original design.
+
+** counting nearest neighboors
+
+First let's consider the case of an infinite latice of PAM, so every
+possible direction we *could* see a neighbour, we assume there is one
+there.  we also assume that for every vector I will list there could
+be a neighbour both following that vector or the negative of it.
+
+First is the PAM case, where we walk 2 units in a single dimension to
+reach a new valid symbol, this can be done in any dimension thus yields
+2 neighbours per dimension
+
+then we consider just 4d case, the vector 1,1,1,1 takes us to a new
+neighbour but if we walk in that direction then -2 in one of the
+dimensions we can also see we'd expect a neighbour at -1,1,1,1 or
+1,-1,1,1 etc. so for a vector with 4 of them differing by 1 we can
+just as validly switch any combination to negatives and get a new
+valid path to a neighbour and a distance vector with more than 4 ones
+in it will not be a nearest neighbour so we won't consider it.  So
+finding the number of neighbours boils down to seeing what
+combinations of the biasing generator matrix gives us unique
+directions with only 4 ones in it, then that can account for 16
+different neighbours by setting each element to + or - and then
+finally adding on the case where a single dimension is moved by 2 or
+-2 to get all neighbours we could expect in an infinite latice.
+
+In the 4d case since there is only the 1 possible biassing vector we get (4*2 + 1*16) = 24 possible neighbours or 6 per dim
+(the 4*2 is the single dimension walk either +2 or -2 and there are 4 dimensions you could do that in)
+in the 6d case we have:
+111100
+110011 and their combination:
+001111
+
+so we'd expect to have 6*2 + 3*16 = 60 neighbours or 10/dim
+
+in 8 dimensions we get:
+1111 0000 A
+1100 1100 B
+1010 1010 C
+0000 1111 D
+0011 1100 A  +B
+1100 0011   D+B
+0011 0011 A+D+B
+0101 1010 A    +C
+1010 0101   D  +C
+0101 0101 A+D  +C
+0110 0110     B+C
+1001 0110 A  +B+C
+0110 1001   D+B+C
+1001 1001 A+D+B+C
+
+so of the 16 possible code words, only the all 0 case and the case of
+A+D don't represent a valid movement direction, all 14 other
+combinations give us directions we can move and expect to see another
+valid codeword unless we are at the boundary of the map
+
+this gives us 8*2 + 14*16 = 240  or about 30/dim.
+
+I think the number of neighbours per dimension should stop accelerating at this point but still, this is so many neighbours.
+compared to PAM which the equivelent would be 2 neighbours per dimension
+
+as this extends further, the reason A+D isn't valid is because they don't overlap with each other but could be linked through B and/or C
+
+If we consider the 12 dims case and just try to count which options would not be valid:
+1111 ---- ---- X
+---- 1111 ---- Y
+---- ---- 1111 Z
+1100 1100 ---- B
+1010 1010 ---- C
+---- 1100 1100 H
+---- 1010 1010 G
+
+we already know we can take cartesian product of [0,B] * [0,C] * [X,Y] to get 8 options + [B,C,B+C] * [0,X+Y] to get 6 more (these are the original 14 options
+we can play the exact same trick with Y,Z and H,G but need to be careful not to double count the only Y case, so we get 13 more options
+now what happens if we combine B,C,H,G?
+
+1100 ---- 1100 B+H
+1010 ---- 1010 C+G
+1010 0110 1100 C+H (not valid)
+1100 0110 1010 B+G (also not valid)
+
+so it seems that we can do the exact same 14 from combining X,Z with
+B+H,C+G to get another 14 but we double counted X and Z again so
+another 12
+
+so we would project to have 14+13+12 different comboes which in an
+infinite latice and accounting for single dimensional hops is 12*2 +
+(14+13+12)*16 = 648 or 54/dim
+
+that feels... that is so many. like in 2 dimensions with triangular
+packing the most you can hope for is 6 points around you which is 3
+per dimension.  54 points per dimension that are all directly adjacent
+to your single point.... that is just mind blowing.
+
+will need to double check and probabaly brute force check that 39 is
+the correct number of combinations, it is out of 2^7 = 128 possible
+words so it would be relatively easy to brute force.
+
+*** 2PAM instead of infinite latice
+
+we started by assuming we could negate any combination of the bias
+vectors, but when we are just using 2PAM then only 1 of these is
+actually valid from the point of all 0s we can only move up in any of
+the dimensions or if we are at 2000 we can only move down in the first
+dimension and up in the rest, so instead of 16 we only have 1 per
+vector
+
+likewise for a single dimension we can only move up OR down not both so it is just the number of dimensions * 1
+so the 12 dimensional case only has 12+39 = 51 neighbours or 17/4 neighbours per dim, 4.25/dim
+
+the 8 dim case is 8+14 = 22  -> 11/4 = 2.75
+
+the 4 dim case 5/4 neighbours per dim (since it has 5 neighbours)
+
+really quick the 16 dimensional case would work very similar to the 12
+dim case, we consider any pair of blocks of 4 bits and there should
+exist the same 14 combinations but we will say 12 because we won't
+double count the ones that are the all 1s on the block
+-  8 we get 12*(2C2) + 2 = 14
+- 12 we get 12*(3C2) + 3 = 39
+- 16 we get 12*(4C2) + 4 = 12*6 + 4 = 76
+
+if this is correct it can be modelled as N(6N-5) where N is the number of blocks of 4 dims each, so the neighbours per dim would be (6N-5)/4 but then the extra 1 neighbour from the PAM so it'd be (6N-1)/4 neighbours per dim where N is the number of blocks of 4
+
+so every time the number of blocks goes up we expect 6 more neighbours? wait how does this relate to.... 4N = n_dims, n_dims/4 = N
+(6N-1)/4 = (6/4 * n_dims - 1)/4 = (3/2*n - 2/2)/4 = (3n-2)/8 = 3n/8 - 1/4 where n is now the number of dimensions
+
+so every time the number of dimensions increases by 4 we expect to see 3/2 extra neighbours? I'm getting lost and confused and need to take a break.
+I am confident that the number of nearest neighbours should increase linearly which means it will only contribute linearly to the bit error rate, that will be relatively low on the log scale which is great and what I was kind of expecting.
+
+Also the optimal bit mapping could probably be changed so that A+D is a neighbour without letting A+B+C+D be a neighbour since that one corresponds to 2 bits being flipped instead of 4, and similarly for higher dimensionality but I'm not sure what the limit is on how well this can work.
+it does mean the number of bit flips per symbol error will also likely increase which is undesirable.
+
+* Simulating
+
+Assuming we are using this with AWGN, instead of simulating individual
+messages we can pick a random noise direction and find boundaries
+along that ray that would cause a mis-detection. We can then use the
+chi distribution with the SNR as input to calculate the expected BER
+without simulating millions of messages. If we were able to do an
+integral over all possible directions this would give a perfect
+analytical solution to the theoretical BER rate of our constellation,
+however simulating several thousand randomly picked direction vectors
+will converge to the true model.
+
+I've written several matlab functions that performs a bisection search
+on a given ray in the constellation to find the nearest point in the
+constellation in every region along the ray, the algorithm does
+involve calling the decoder several times so writing an efficient
+decoder will be necessary for higher dimensional simulations, but it
+still requires relatively low decodings to work.
+
+* TODOS
+The model is currently not managing normalization properly, when the
+constellation is set to have a mean energy per dimension of 1 it
+performs on par with 16QAM, however when the energy is changed either
+up or down the performance gets worse. I have to assume this is
+because of incorrect normalizations in the code but I am unsure how to
+address it.
+
+* TO ask prof marsland
+
+** grasmanians
+Gohary is a world expert on grasmanian constellations, he knew I was
+interested in constellation design, grasmanians are topological
+manifolds, he told me a topology course wouldn't be useful
+
+** constellation + encoding
+In information theory class we proved that optimizing constellation
+design and encoding independently cannot possibly yield better results
+than jointly optimizing them, around the same time I found this out I
+also realized my constellation could be described as a block encoding
+of QAM. Is there any point knowing that? like how do I deal?
+
+** Literature search
+What should I be looking for? How should I be trying to relate other works to my own?
+- analysis techniques?
+- similar designs to compare to?
+- something else?
+
+** Hard requirements
+- where do I find information on the masters program and the hard requirements?
+  
+
+sphere decoding
+
+how I came up with vectors
+how vectors relate to constellation
+how evaluating it - radial check thingy
+
+relation to QAM isn't relevant yet.
+
+multidimensional constellations
+lattice codes
+
+CHECK IN ONCE A WEEK.
+
+talk to librarian, look for most citations, usually old.
+
+find time of exam on 10th and send email
+
+
+
+- modulo space so we can fit it inside a QAM constellation
+- first viable solution in 4d
+- maybe talk about 5d?
+- tetrahedron in 6 d
+- thingy in 7d, has 8 points all directly adjacent which requires a min of 7 dims to store so as we add more points and the points added continues to be exponential we expect them to not be densely packed
+- 8d to 12d repeats the patterns
+
+- higher modulation, finer modulo space, corresponds to higher QAM modulation and as a block decoder
+
+- analysing by generating direction vectors and doing bisection search algorithm
+  - not rigorous, makes assumptions that haven't been proven (specifically bisection algorithm)
+- decoder can at minimum decode the QAM bits directly and reduce it to which parity it is, although it may find it should be a symbol in an adjacent block and need to flip some qam bits.
+- whether decoder can use one extra bit from qam for whole optimal deceoder or whether euclidian distance is ever needed for decoding.

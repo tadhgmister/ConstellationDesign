@@ -1,0 +1,49 @@
+* Formal exact definition.
+
+Lets say we are using a 2-PAM system. We can define the points in 2D as:
+
+- [0,0]
+- [0,2]
+- [2,0]
+- [2,2]
+
+This is not normalized or centered but is more useful basis for the rest of the system, throughout this document we will assume that all constellations will be normalized and recentered.
+
+These points for a square of side length 2, if we were to try to insert an extra point in this square at the coordinate (1,1) it would be length sqrt(2) from any corner. Adding this point would reduce the minimum distance between constellation points so we don't consider it valid.
+
+IF we move up to 3D, we can equivelently create 8 points to form a cube of length 2 and the center (1,1,1) will be sqrt(3) away from any corner, still not enough
+
+When we move to 4D the center point (1,1,1,1) is now sqrt(4) = 2 away from each corner. This means we could use the center of a hypercube as an additional constellation point without adversely affecting the symbol error rate.
+
+Since we need a power of 2 symbols to make a useful binary constellation, instead of just inserting one point in the center of the constellation, we can duplicate each existing point to it's own position and that position + (1,1,1,1) to get this constellation:
+
+- [0,0,0,0], [1,1,1,1]
+- [0,0,0,2], [1,1,1,3]
+- [0,0,2,0], [1,1,3,1]
+- [0,0,2,2], [1,1,3,3]
+- [0,2,0,0], [1,3,1,1]
+- [0,2,0,2], [1,3,1,3]
+- [0,2,2,0], [1,3,3,1]
+- [0,2,2,2], [1,3,3,3]
+- [2,0,0,0], [3,1,1,1]
+- [2,0,0,2], [3,1,1,3]
+- [2,0,2,0], [3,1,3,1]
+- [2,0,2,2], [3,1,3,3]
+- [2,2,0,0], [3,3,1,1]
+- [2,2,0,2], [3,3,1,3]
+- [2,2,2,0], [3,3,3,1]
+- [2,2,2,2], [3,3,3,3]
+
+This forms a 32point (5bit) constellation in 4D that retains a minimum euclidian symbol distance of 2. It does require some extra power compared to the original scheme.
+
+When centered the original scheme would send 1 or -1 so the power of each symbol is 1 unit of energy per dimension. With the new scheme each coordinate is at -1.5,-0.5,+0.5,+1.5 with all equal probability.
+Which corresponds to an average power of 1.25 units of energy per dimension. So this requires a quarter extra energy for a quarter more bits, meaning the energy per bit is the exact same as before but we have a higher throughput in exchange for higher adjacency.
+
+We can continue to increase in dimensions, keeping the idea that we will find some scheme to duplicate each point from the original 2PAM constellation and find that in 6D we can generate a tetrahedron with the desirable properties:
+
+- 000000
+- 111100
+- 110011
+- 001111
+
+The point 111100 corresponds to the original vector we used in 4D and adding it to the new vector of 110011 modulo 2 gives us the last element. This means we can compute the parity bits modulo 2 and then add them to the QAM constellation without modulo.
