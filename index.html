@@ -31,8 +31,8 @@
 </ul>
 <p>These are generated using logic explained below and then the elements are shuffled such that all three 2D slices hit each possible value of [(0,0), (0,1), (1,0), (1,1)] so that we can easily visualize them in the same manner as the previous constellation designs:</p>
 <p><img alt="thingy" src="./img_shapesin6d.png" /></p>
-<p>This could be used as a constellation of its own, effectively transmitting 2 bits every 6 dimensions, but the advantage is that this can be layered on top of existing QAM constellations like the previous example. Where each point in the 6D extension of some QAM constellation is duplicated by each bias vector to generate valid codewords. If we plot the codewords for 16QAM it looks like this:
-<img alt="6d16QAMbias" src="./img_6d16QAMbias.png" /></p>
+<p>This could be used as a constellation of its own, effectively transmitting 2 bits every 6 dimensions, but the advantage is that this can be layered on top of existing QAM constellations like the previous example. Where each point in the 6D extension of some QAM constellation is duplicated by each bias vector to generate valid codewords. If we plot the codewords for 16QAM it looks like this:</p>
+<p><img alt="6d16QAMbias" src="./img_6d16QAMbias.png" /></p>
 <p>The way to choose a codeword is the same as before, first pick a colour and then pick a point of that colour from each figure to generate one codeword. This gives us 4+4+4+2=14 bits per 6D (4 bits for each graph + 2 bits from which colour is chosen) You may notice this is looking a lot like 64QAM which suggests our constellation could be described as a block encoding applied to 64 QAM, however because of the geometric structure we can potentially implement better decoding than solely interpreting it as a block encoding to one higher modulation of QAM.</p>
 <p>If we use 4QAM as our seed instead of 16QAM we get a smaller constellation which I can use for an example:</p>
 <p><img alt="4QAM modulated by tetrahedrons in 6D " src="./img_4qambias6d.png" /></p>
@@ -45,7 +45,7 @@
 </ul>
 <p>If the block decoder had enough information it could determine the second one is closer because the +0.1 in the 3rd dimension but both of these codewords are further away than the transmitted message:</p>
 <blockquote>
-<p>(2,3  ,3  ,3  ,2,3)
+<p>(2,3  ,3  ,3  ,2,3) 
 - (2,2.6,2.1,2.6,2,2.6)
 = (0,0.4,0.9,0.4,0,0.4) length is sqrt(3*0.4^2 + 0.9^2) = sqrt(1.29)</p>
 </blockquote>
