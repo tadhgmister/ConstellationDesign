@@ -20,7 +20,7 @@ class HighDimScatter:
         for idx, ax in enumerate(self.axs):
             ax.set_xlabel(f'Dimension {2 * idx + 1}')
             ax.set_ylabel(f'Dimension {2 * idx + 2}')
-            ax.set_title(f'Scatter Plot - Dimensions {2 * idx + 1} and {2 * idx + 2}')
+            #ax.set_title(f'Dim {2 * idx + 1} and {2 * idx + 2}')
             ax.axis('equal')
             ax.axis([min(grid) - 1, max(grid) + 1] * 2)
             ax.grid(True)

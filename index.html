@@ -2,88 +2,75 @@
 <html>
  <head>
   <meta name="color-scheme" content="light dark">
+  
+  
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+  </script>
+
  </head>
 <body>
 <p>Tadhg's thesis work</p>
 <h1>Compelling example</h1>
 <p>Consider a 16QAM and a rectangular 8QAM constellation. In this document all constellations will be represented with strictly non-negative coordinates so that distance vectors have + and - while coordinate points are always written without the sign. So the constellations in question would look like this:</p>
-<p><img alt="16QAM and 8QAM constellations" src="./img_16QAM8QAM.png" /></p>
+<p><img alt="16QAM and 8QAM constellations" src="./img/16QAM8QAM.png" /></p>
 <p>Both of these constellations exist in 2 spatial dimensions and transmit 4 or 3 bits respectively. If we composed a system where we alternate between using the constellations we might expect to get a net throughput of 7 bits every 4 spatial dimensions.</p>
 <p>However, if for every pair of 16QAM and 8QAM points we allow a choice of whether to send the 16QAM first or the 8QAM point first we can extract an 8th bit from this scheme. In this way we can represent the valid codewords in this new hybrid constellation as first picking O (blue) or X (red), then picking any point of that colour on the first graph then picking any point of the same colour on the second graph.</p>
-<p><img alt="16,8 QAM hybrid constellation" src="./img_hybrid.png" /></p>
+<p><img alt="16,8 QAM hybrid constellation" src="./img/hybrid.png" /></p>
 <p>This has the same throughput as the original 16QAM constellation but requires less power to transmit. I will also show that the minimum symbol distance is also still 2 even though it may not seem obvious at first glance.</p>
 <p>Imagine we transmit the symbol [1,1,0,4], that is the codeword with x=1,y=1 on the left graph and x=0,y=4 on the right graph. If we experience a noise vector of [+0.7, +0.6, +0.3, +0.1] which has a euclidean distance of about 0.975, we get the black dot as shown on the following graph:</p>
-<p><img alt="point shifted by noise, appears closer to a valid point on the left graph but is still closer to the original one" src="./img_noise_example.png" /></p>
-<p>Even though on the left graph the point is closer to the point at [2,2], you can only chose that if you also use a blue point on the right graph. the vector from the valid codeword [2,2,5,1] to the green point is [-0.3,-0.4,-0.7, -0.9] which has a length of about 1.245, further than the original point. Any pair of neighbouring codewords will either differ in a single dimension by +-2 and be equal in the other 3 dimensions, or in all 4 dimensions by +-1. </p>
-<h2>A more systematic structure</h2>
-<p>In the previous example we are selecting between 2 different constellation schemes that have a different number of bits, this produces some issues regarding encoding and as we increase to higher dimensions we may wish to not use the exact same number of both mappings. The core reason the hybrid map worked is that both maps use orthogonal grids where each point is spaced out 2 units in some dimension and then the mappings were offset by a vector of [+1,+1,+1,+1] relative to each other. We can use this property to produce a different mapping where we encode 2 16QAM symbols then based on a 9th bit we possibly offset the whole mapping by [1,1,1,1]. This would produce the following constellation where we interpret the graphs similarly, to choose a codeword first pick whether you want a blue O or a red X, then select any point on the left graph of chosen colour, and any point on the right graph of the chosen colour.</p>
-<p><img alt="16 QAM with bias" src="./img_16qambias.png" /></p>
+<p><img alt="point shifted by noise, appears closer to a valid point on the left graph but is still closer to the original one" src="./img/noise_example.png" /></p>
+<p>Even though on the left graph the point is closer to the point at [2,2], you can only chose that if you also use a blue point on the right graph. the vector from the valid codeword [2,2,5,1] to the green point is [-0.3,-0.4,-0.7, -0.9] which has a length of about 1.245, further than the original point. Any pair of neighbouring codewords will either differ in a single dimension by +-2 and be equal in the other 3 dimensions, or in all 4 dimensions by +-1.</p>
+<p>This also hints at how an optimal decoder could be implemented, we can trivially determine which 'box' the transmitted point is inside (the region seperated by grid lines) and then there are in this case 2 codewords (red and blue) that are viable, we could check the euclidean distance to both and return the closer codeword.</p>
+<h2>Geometric interpretation</h2>
+<p>The example given above using 16QAM and rectangular 8QAM gives a compelling example that can reduce power compared to 16QAM without compremising on nearest symbol distance or throughput but doesn't give clear understanding on how this example was determined or how to generate other viable schemes. In this section I will explain the way I first thought about this system in terms of geometry. If we start with 1D where we have the points (0) and (2), the midpoint (1) is 1 unit away from both points. In 2D we have a square with the corners (0,0),(0,2),(2,0),(2,2) and the center at the coordinate (1,1) is going to be sqrt(2) distance away from the corners.</p>
+<p>In 3D we can similarly create a cube with the center at (1,1,1) which will be sqrt(3) away from the corners, and in 4D the distance of the center to the corners is sqrt(4)=2. This means that in 4D the distance from the center of a hypercube is the same distance as the corners to each other. Since QAM is based on this type of orthogonal grid, it means that in 4D there is enough space to fit a whole extra codeword in the middle of other ones that doesn't comprimise on minimum symbol distance.</p>
+<p>There are 2 interesting results from this, the first is that the point in the middle of of a N-dimensional box of side length 2 is sqrt(N), so as the dimensionality increases the space between codewords in an orthogonal grid like QAM increases as the dimensionality increases so if the only requirement is to maintain the minimum symbol distance and to preserve the original grid structure, we can expect to continue to pack more points into the surrounding space.</p>
+<p>The second interesting result is that an inifinite lattice in 4D, each codeword has 24 nearest neighbours which is the densest possible structure in 4D. To show this result, imagine the original hypercube. The point in the middle will has all 16 vertices as nearest neighbours
+ (each coordinate differs by +-1 in any combination of +s and -s) and in an extended lattice there are valid codewords by differing a single dimension by 2, so (+2,0,0,0), (-2,0,0,0), (0,+2,0,0), (0,-2,0,0), (0,0,+2,0), (0,0,-2,0), (0,0,0,+2), (0,0,0,-2) which is 8 additional</p>
+<h2>A more systematic structure for transmission</h2>
+<p>So far I've shown a structure that is good for transmission but can't easily be extended and shown the underlying 4D lattice is optimal in terms of density, but this doesn't show a clear way to extend to other constellations. Instead of using 2 different bit mappings, one using even coordinates and another using odd coordinates, instead we can use a common 'seed' mapping and use a single bit that decides whether to offset the coordinate of the codeword by (+1,+1,+1,+1). if we use 16QAM as our seed constellation we'd end up with this constellation:</p>
+<p>a<img alt="16 QAM with bias" src="./img/16qambias.png" /></p>
 <p>This would transmit 9 bits per 4 dimensions having slightly higher throughput compared to 16QAM on its own but also requires more energy. I won't analyse this structure specifically in depth but this is the first step to expanding to higher dimensions.</p>
 <h3>Decoding</h3>
 <p>As long as the received vector is within the convex hull of the constellation it is trivial to determine which 'box' (region seperated by grid lines) the received vector is in as it is solely determined by the integer part of the vector coordinates, then we could enumerate all the valid codewords that touch that box which in the 4D case would be a red codeword and a blue codeword and then check which of those viable codewords are closer. Better decoder designs may exist but this is the approach used in my research. When a vector is outside the convex hull of the constellation currently I am brute-force checking all points in the constellation as I haven't analysed more efficient techniques yet. </p>
-<h2>extending intuitive example into higher dimensions</h2>
-<p>In 4D we essentially had one bias vector that we could optionally add to an existing QAM point to get a new codeword, in 6D we can have 4 bias options to get a second bit:</p>
+<h2>extending to higher dimensions</h2>
+<p>In 4D we essentially have 1 bit that contributes to the 'bias' of our seed. In 6D we can create 4 possible biasses giving us 2 bits of biassing: (the colours are for the next figure)</p>
 <ul>
-<li>[+0,+0,+0,+0,+0,+0]</li>
-<li>[+1,+0,+1,+0,+1,+1]</li>
-<li>[+0,+1,+1,+1,+0,+1]</li>
-<li>[+1,+1,+0,+1,+1,+0]</li>
+<li>[+0,+0,+0,+0,+0,+0] (blue)</li>
+<li>[+1,+0,+1,+0,+1,+1] (orange)</li>
+<li>[+0,+1,+1,+1,+0,+1] (green)</li>
+<li>[+1,+1,+0,+1,+1,+0] (red)</li>
 </ul>
-<p>These are generated using logic explained below and then the elements are shuffled such that all three 2D slices hit each possible value of [(0,0), (0,1), (1,0), (1,1)] so that we can easily visualize them in the same manner as the previous constellation designs:</p>
-<p><img alt="thingy" src="./img_shapesin6d.png" /></p>
-<p>This could be used as a constellation of its own, effectively transmitting 2 bits every 6 dimensions, but the advantage is that this can be layered on top of existing QAM constellations like the previous example. Where each point in the 6D extension of some QAM constellation is duplicated by each bias vector to generate valid codewords. If we plot the codewords for 16QAM it looks like this:</p>
-<p><img alt="6d16QAMbias" src="./img_6d16QAMbias.png" /></p>
-<p>The way to choose a codeword is the same as before, first pick a colour and then pick a point of that colour from each figure to generate one codeword. This gives us 4+4+4+2=14 bits per 6D (4 bits for each graph + 2 bits from which colour is chosen) You may notice this is looking a lot like 64QAM which suggests our constellation could be described as a block encoding applied to 64 QAM, however because of the geometric structure we can potentially implement better decoding than solely interpreting it as a block encoding to one higher modulation of QAM.</p>
-<p>If we use 4QAM as our seed instead of 16QAM we get a smaller constellation which I can use for an example:</p>
-<p><img alt="4QAM modulated by tetrahedrons in 6D " src="./img_4qambias6d.png" /></p>
-<p>We could interpret this as a 16 QAM constellation with grey mapping so it contains 12 total bits, then using just the bits find a valid codeword that is the least number of bit flips. The mapping of the codewords to 8 bit sequences is not relevent for this analysis.</p>
-<p>If our grey mapping maps the vector coordinates to bit sequences: 0-&gt;00, 1-&gt;01, 2-&gt;11, 3-&gt;10, then the all 1s message would correspond to the point (2,2,2,2,2,2) which is a valid codeword (the top right blue point)</p>
+<p>This corresponds to a linear binary code with minimum hamming distance of 4 and generating matrix of</p>
+<ul>
+<li>101011</li>
+<li>011101</li>
+</ul>
+<p>which have been chosen specifically to be easy to visualize when plotting as a series of three 2D plots:</p>
+<p><img alt="thingy" src="./img/shapesin6d.png" /></p>
+<p>This could be used as a constellation of its own, effectively transmitting 2 bits every 6 dimensions, but the advantage is that this can be layered on top of existing QAM constellations like the previous examples. if we use 16QAM as our 'seed', meaning we encode 12 bits as 3 16QAM symbols and then have an additional 2 bits to bias the 6D point by one of the bias vectors we get the following constellation:</p>
+<p><img alt="6d16QAMbias" src="./img/6d16QAMbias.png" /></p>
+<p>You may notice this mapping looks a lot like 64QAM, so our 14bit/6D constellation could be interpreted as a block encoding on 18bit/6D of 64QAM with rate of 14/18=7/9. However unlike block codes that primarily use hamming distance to decode a transmitted signal this mapping is structured in a way that would allow efficient and more optimal decoding as I will demonstrate below.</p>
+<p>For the demonstration I will use 4QAM as our seed instead of 16QAM we get a smaller constellation which can simplify the example.</p>
+<p><img alt="4QAM modulated by tetrahedrons in 6D " src="./img/4qambias6d.png" /></p>
+<p>Our transmission strategy will send 8 bits, the first 6 get mapped to each dimension individually multiplied by 2, then the last 2 are used to generate a bias vector using the above linear code and added to the coordinate found by the first 6 bits. So the message (11111100) correspond to the blue point at (3,3,3,3,3,3).</p>
+<p>So we will treat this as a 16QAM constellation with grey mapping (<strong>TODO: add binary labels to the points</strong>) 
+If our grey mapping maps the vector coordinates to bit sequences: 0-&gt;00, 1-&gt;01, 2-&gt;11, 3-&gt;10. so our codeword at (3,3,3,3,3,3) corresponds to the 16QAM message of [1111 1111 1111].</p>
 <p>Then suppose our noise vector is [0, +0.6, +0.1, +0.6, 0, +0.6] resulting in the purple point in the above figure. Decoding as 16QAM it will be very certain the byte sequence is 1110 1110 1110, this is not a valid codeword but the middle graph's X position (dimension 3) can vary to get 2 other valid codewords that are both green.</p>
 <ul>
 <li>1110 0110 1110 at coordinate (2,3, 1,3, 2,3)</li>
 <li>1110 1010 1110 at coordinate (2,3, 3,3, 2,3)</li>
 </ul>
-<p>If the block decoder had enough information it could determine the second one is closer because the +0.1 in the 3rd dimension but both of these codewords are further away than the transmitted message:</p>
+<p>Both of these codewords only vary from the received code by only 2 bits while the original transmitted message differs by 3 bits, however the euclidean distance to the original codeword is closer than both green points. If we calculate the distance from the point (2,3,3,3,2,3) we get:</p>
 <p><code>(2, 3  , 3  , 3  , 2, 3) 
  - (2, 2.6, 2.1, 2.6, 2, 2.6)
  = (0, 0.4, 0.9, 0.4, 0, 0.4)
  length is sqrt(3*0.4^2 + 0.9^2) = sqrt(1.29)</code></p>
-<p>Where as the length of the noise vector to the original message is sqrt(3*0.6^2 + 0.1^2) = sqrt(1.09). This is true in general where the closest bitwise distance to a valid codeword may not be the euclidean distance to a valid codeword. The goal of this research is to analyse structures where we can quickly determine a relatively small set of viable codewords to check using euclidean distances.</p>
-<h1>modular space and representations.</h1>
-<p>** NOTE: I realized I am reinventing the wheel here,*<em> I am just defining linear block codes with distance 4. My system isn't nearly as good as modern codes like Reed–Muller codes, that one ends up with 2^m - m - 1 basis vectors in 2^m dimensions which is better than my about 0.75</em>M in M dimensions. I can likely swap out my code with a modern one to get better results, the interesting part that I really care about is when we add on a second level of modulation later on.</p>
-<p>For the rest of the document I wish to move away from the part where the bias vectors are applied to a QAM mapping. To accomplish this we will analyse the bias vectors in modulo 2 space, this is a valid approach since in general we are duplicating each bias vector by 2 units along each dimension in both direction in the general case when we layer it on top of a QAM constellation. I will also start using bit strings to represent the bias vectors as this is closer to the way it will eventually be implemented.</p>
-<p>In 4d we have our first viable bias vector of 1111. in 6D we can get the 4 points:</p>
-<ul>
-<li>000000</li>
-<li>111100</li>
-<li>110011</li>
-<li>001111</li>
-</ul>
-<p>(if we shuffle around the bits this gives the vectors used in the above example, I wish to lay them out like this moving forward)</p>
-<p>the vector 111100 is the same as our original 4d case and if we XOR it with the vector 110011 we get the last vector. This means we can map our 2 bits for biassing to the vectors 111100 and 110011, xor the result and that gives us a valid final bias vector.</p>
-<p>In 7D we can add another bias basis vector:</p>
-<ul>
-<li>1111000</li>
-<li>1100110</li>
-<li>1010101</li>
-</ul>
-<p>The only property we wish to preserve is that each basis vector differs from each other basis vector by at least 4 bits, this gives us 8 possible bias vectors which because each of the basis vectors vary by 4 bits from each other are guarenteed to also vary by 4 bits from each other. I know this could be proven but I'm not sure how to write it formally.</p>
-<h4>side tangent for geometry</h4>
-<p>To have N points all equal distance away from each other we need N-1 dimensions. This corresponds to a pair of points in 1d, a triangle in 2d, a tetrahedron in 3d etc. I'm not sure how to prove it but I know if you have N dimensions you can have the vectors [1,0,0,0,0], [0,1,0,0,0], etc. where all coordinates are 0 except one is 1 and with N dimensions you get N points, I feel like you could then build a matrix out of the difference vectors and show it has rank N-1 which implies the shape with that many points could exist in N-1 dimensional space but I'm not sure how to formalize this yet.</p>
-<h4>back to the 7d case.</h4>
-<p>Since our 3 basis vectors form 8 points in 7D space that are all equal distance from each other, using the logic shown in the side tangent this is the most connectivity we could expect. As we expand further we expect to put 16 points in less than 15 dimensions so moving any further will require not all the points we generate to be densely adjacent.</p>
-<p>In 8D we have our 4th basis vector and it shows a repeating pattern into higher dimensions:</p>
-<ul>
-<li>111100000...</li>
-<li>1100110000...</li>
-<li>10101010000...</li>
-<li>000011110000...</li>
-<li>0000110011000...</li>
-<li>00001010101000...</li>
-<li>000000001111000...</li>
-<li>0000000011001100...</li>
-</ul>
-<p>I do not have a proof that this is the optimal pattern given the constraint that each must be different by at least 4 elements from each other and we compare them in modulo 2 space but it does work. It also produces the first non densely connected bias vectors as 11110000 and 00001111 are disjoint.</p>
+<p>Where as the length of the noise vector to the original message is sqrt(3*0.6^2 + 0.1^2) = sqrt(1.09). This shows that the codeword with closest hamming distance is not necessarily the same as the codeword with closest euclidean distance. The goal of this research is to analyse structures where we can quickly determine a relatively small set of viable codewords to check using euclidean distances.</p>
+<h3>biassing in higher dimensions</h3>
+<p>In any arbitrary dimensionality N, we can choose a QAM seed and find a linear binary code with minimum hamming distance 4, so a code with parameters (N,k,4) where k is as high as possible (or following an easy to decode code structure like Reed-Muller codes) then we can compose them to form a new constellation where most of the bits are encoded directly as QAM and the rest generate a bias vector where each coordinate is half the length of the original QAM (we've been assuming the QAM is always 2 units and bias is 1 unit previously but this isn't even strictly necessary) to generate valid codewords. When decoding the bias structure essentially increases the QAM modulation by 1.</p>
 <h2>Higher order modulation.</h2>
 <p>When we get up to 16 dimensions we have yet another oppertunity. Similarly to how we could fit a new point in a 4D hypercube, in 16 dimensions the coordinate with all 16 entries of 1/2 will be 2 units away from the origin as well as every possible point that falls on a lattice point from the first order modulation used above. This means we can layer this independently using the exact same construction as a lienar block code with minimum distance of 16 in however many dimensions we have.</p>
 <p>So we can imagine a constellation in N dimensions by taking the first N bits and map them to a 4*I generating matrix, that is each element when set to 1 moves in the corresponding dimension 4 units. Then the next set of bits use a linear block code of distance 4 and size N to determine which dimensions to move 2 units in. Then a third layer with size N and distance 16 that moves in 1 unit. This becomes a lattice consistent with 64 QAM and forms an extremely dense lattice. (now that we doubled the lengths so we didn't have to deal with lengths of 1/2 every lattice point is 4 units away instead of 2 as it was previously) this construction still strictly maintains the property that every single codeword is a minimum of 4 units away, equivelent to our original 4QAM constellation but our throughput can achieve comparable rates to 2/3 of 64QAM.</p>
@@ -101,13 +88,92 @@ k = 312</p>
 <p>If we have a set of all possible neighbouring vectors (from any given codeword all the nearest neighbours will be found at a subset of that list and every vector in the list is used for at least one point in the constellation) and can prove that one vector is isometric to every other (considering the set of all possible rotations/reflections/ unitary transformations of space that map the set of vectors back to the same set of vectors) then it should prove that the boundary of correct symbol detection - assuming a dense infinite lattice - would be the equivelent of a regular polyhedron in N dimensional space. This would mean the hyperplane bisector of one such vector which defines the boundary that a vector will be decoded as one or the other should have a regular polygon shape uniquely defined by the shared neighbours, if you connect that regular N-1 polyhedra to the original coordinate you get a N dimensional equivelent of a polygonal cone. Taking an integral over the noise vectors for that volume gives the probability of receiving a point within that volume due to a particular noise model, then if we proved that every neighbour is isometric to any other we just multiply this probability by the number of neighbours to obtain the exact probability of correctly decoding the transmitted symbol within an infinite lattice. Since edges of the lattice are more likely to decode the correct symbol when the noise is pointed outside the lattice entirely, this would be a strict lower bound on the probability of correctly decoding the transmitted symbol and therefore gives us a strict upper bound on the probability of symbol error as an analytic solution.</p>
 <p>This volume calculation could be done regardless of isometries but unless all vectors are isometric to each other you cannot just multiply by the number of neighbours you'd have to at least do that volume calculation for each class of isometries. Since it is a very regular lattice I wouldn't expect the isometries to be any more classes than the number of layering modulation schemes but this is way beyong what I am capable of actually checking at this point. :P</p>
 <h1>Things to further investigate</h1>
-<p>the way I am generating lattice points has very similar structure to points in the <a href="https://cohn.mit.edu/kissing-numbers">kissing numbers table</a>  (the downloadable list of points) I know I found <a href="https://www.combinatorics.org/ojs/index.php/eljc/article/view/v5i1r22/pdf">a paper</a> that uses linear block codes and a very similar construction to my construction where they are just trying to find points around the origin where as I am trying to find a valid lattice, but it might be true that putting their lattice points inside a modulo space gets to the exact same thing, although theirs is slightly different since it has 2 points differing by the highest number.
-- look more into that paper's construction and whether it can be generalized to a block code directly for maximum adjacency.
-- look into papers that reference that paper that may relate to creating block codes based on the idea of having high packing. It is very possible someone else has done something like this.
-- figure out more optimal block codes for specifically 24 dimensions since the exact optimal kissing number is known for that and if I ahve first and second order modulation and with optimal block codes it hits the kissing number I can be damn sure this is on the right track.
-- look into lattice codes, get a comparison and try to understand motivation behind them as they may relate to my construction.
-- use the <a href="https://en.wikipedia.org/wiki/Griesmer_bound">Griesmer bound</a> to calculate what the optimal transmission would be at any given dimensionality, make a plot.
-- figure out whether I could calculate the number of neighbour vectors without actually knowing the vectors, just by knowing the size of the block code. Be useful to compare to the theoretical max of the kissing number.</p>
+<p>the way I am generating lattice points has very similar structure to points in the <a href="https://cohn.mit.edu/kissing-numbers">kissing numbers table</a>  (the downloadable list of points) I know I found <a href="https://www.combinatorics.org/ojs/index.php/eljc/article/view/v5i1r22/pdf">a paper</a> that uses linear block codes and a very similar construction to my construction where they are just trying to find points around the origin where as I am trying to find a valid lattice, but it might be true that putting their lattice points inside a modulo space gets to the exact same thing, although theirs is slightly different since it has 2 points differing by the highest number.</p>
+<ul>
+<li>look more into that paper's construction and whether it can be generalized to a block code directly for maximum adjacency.</li>
+<li>look into papers that reference that paper that may relate to creating block codes based on the idea of having high packing. It is very possible someone else has done something like this.</li>
+<li>figure out more optimal block codes for specifically 24 dimensions since the exact optimal kissing number is known for that and if I ahve first and second order modulation and with optimal block codes it hits the kissing number I can be damn sure this is on the right track.</li>
+<li>look into lattice codes, get a comparison and try to understand motivation behind them as they may relate to my construction.</li>
+<li>use the <a href="https://en.wikipedia.org/wiki/Griesmer_bound">Griesmer bound</a> to calculate what the optimal transmission would be at any given dimensionality, make a plot.</li>
+<li>figure out whether I could calculate the number of neighbour vectors without actually knowing the vectors, just by knowing the size of the block code. Be useful to compare to the theoretical max of the kissing number.</li>
+</ul>
+<h1>TODO FOR THIS DOCUMENT</h1>
+<ul>
+<li>figure out how to formalize with variables and math etc the higher order modulation system.</li>
+</ul>
+<p>hello this is equation
+$$\sqrt{3}$$
+and stuff stuff</p>
+<p>123456789012345678901234</p>
+<p>111100000000000000000000
+110011000000000000000000
+101010100000000000000000
+000011110000000000000000
+000011001100000000000000
+000010101010000000000000
+000000001111000000000000
+000000001100110000000000
+000000001010101000000000
+000000000000111100000000
+000000000000110011000000
+000000000000101010100000
+000000000000000011110000
+000000000000000011001100
+000000000000000010101010
+000000000000000000001111
+100010001000100000000000
+000000001000100010001000</p>
+<!--
+
+
+# modular space and representations.
+
+**NOTE: I realized I am reinventing the wheel here,** I am just defining linear block codes with distance 4. My system isn't nearly as good as modern codes like Reed–Muller codes, that one ends up with 2^m - m - 1 basis vectors in 2^m dimensions which is better than my about 0.75*M in M dimensions. I can likely swap out my code with a modern one to get better results, the interesting part that I really care about is when we add on a second level of modulation later on.
+
+
+For the rest of the document I wish to move away from the part where the bias vectors are applied to a QAM mapping. To accomplish this we will analyse the bias vectors in modulo 2 space, this is a valid approach since in general we are duplicating each bias vector by 2 units along each dimension in both direction in the general case when we layer it on top of a QAM constellation. I will also start using bit strings to represent the bias vectors as this is closer to the way it will eventually be implemented.
+
+In 4d we have our first viable bias vector of 1111. in 6D we can get the 4 points:
+
+- 000000
+- 111100
+- 110011
+- 001111
+
+(if we shuffle around the bits this gives the vectors used in the above example, I wish to lay them out like this moving forward)
+
+the vector 111100 is the same as our original 4d case and if we XOR it with the vector 110011 we get the last vector. This means we can map our 2 bits for biassing to the vectors 111100 and 110011, xor the result and that gives us a valid final bias vector.
+
+In 7D we can add another bias basis vector:
+
+- 1111000
+- 1100110
+- 1010101
+
+The only property we wish to preserve is that each basis vector differs from each other basis vector by at least 4 bits, this gives us 8 possible bias vectors which because each of the basis vectors vary by 4 bits from each other are guarenteed to also vary by 4 bits from each other. I know this could be proven but I'm not sure how to write it formally.
+
+#### side tangent for geometry
+
+To have N points all equal distance away from each other we need N-1 dimensions. This corresponds to a pair of points in 1d, a triangle in 2d, a tetrahedron in 3d etc. I'm not sure how to prove it but I know if you have N dimensions you can have the vectors [1,0,0,0,0], [0,1,0,0,0], etc. where all coordinates are 0 except one is 1 and with N dimensions you get N points, I feel like you could then build a matrix out of the difference vectors and show it has rank N-1 which implies the shape with that many points could exist in N-1 dimensional space but I'm not sure how to formalize this yet.
+
+#### back to the 7d case.
+
+Since our 3 basis vectors form 8 points in 7D space that are all equal distance from each other, using the logic shown in the side tangent this is the most connectivity we could expect. As we expand further we expect to put 16 points in less than 15 dimensions so moving any further will require not all the points we generate to be densely adjacent.
+
+In 8D we have our 4th basis vector and it shows a repeating pattern into higher dimensions:
+
+- 111100000...
+- 1100110000...
+- 10101010000...
+- 000011110000...
+- 0000110011000...
+- 00001010101000...
+- 000000001111000...
+- 0000000011001100...
+
+I do not have a proof that this is the optimal pattern given the constraint that each must be different by at least 4 elements from each other and we compare them in modulo 2 space but it does work. It also produces the first non densely connected bias vectors as 11110000 and 00001111 are disjoint.
+
+-->
 </body>
 </html>
 

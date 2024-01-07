@@ -1,0 +1,3 @@
+
+!pyscript = |> guix shell python python-numpy python-matplotlib -- python3 -B %f > %o |> 
+

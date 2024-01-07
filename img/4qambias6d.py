@@ -1,4 +1,4 @@
-from img_shapesin6d import visual_bias_vectors_6d
+from shapesin6d import visual_bias_vectors_6d
 from plotutil import HighDimScatter
 import itertools
 
