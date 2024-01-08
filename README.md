@@ -35,13 +35,11 @@ The second interesting result is that an inifinite lattice in 4D, each codeword 
 
 ## A more systematic structure for transmission
 
-So far I've shown a structure that is good for transmission but can't easily be extended and shown the underlying 4D lattice is optimal in terms of density, but this doesn't show a clear way to extend to other constellations. Instead of using 2 different bit mappings, one using even coordinates and another using odd coordinates, instead we can use a common 'seed' mapping and use a single bit that decides whether to offset the coordinate of the codeword by (+1,+1,+1,+1). if we use 16QAM as our seed constellation we'd end up with this constellation:
+So far I've shown a structure that is good for transmission but can't easily be extended and shown the underlying 4D lattice is optimal in terms of density, but this doesn't show a clear way to extend to other constellations. For more systematic constellation design I will only create latices that have nearest neighbour of 1 unit and use 4QAM as my 'seed' constellation. By using a 4QAM constellation and optionally shifting all 4 dimensions by 1/2 units we get a mapping that looks like this:
 
-a![16 QAM with bias](./img/16qambias.png)
+![16 QAM with bias](./img/pam2bias.png)
 
-This would transmit 9 bits per 4 dimensions having slightly higher throughput compared to 16QAM on its own but also requires more energy. I won't analyse this structure specifically in depth but this is the first step to expanding to higher dimensions.
-
-
+This will transmit 5 bits every 4 dimensions and every point is at least 1 unit away from any other point, either a single dimension shifting by 1 or all 4 dimensions shifting by 1/2. 
 
 ### Decoding
 
@@ -66,12 +64,11 @@ which have been chosen specifically to be easy to visualize when plotting as a s
 
 ![thingy](./img/shapesin6d.png)
 
-This could be used as a constellation of its own, effectively transmitting 2 bits every 6 dimensions, but the advantage is that this can be layered on top of existing QAM constellations like the previous examples. if we use 16QAM as our 'seed', meaning we encode 12 bits as 3 16QAM symbols and then have an additional 2 bits to bias the 6D point by one of the bias vectors we get the following constellation:
+This could be used as a constellation of its own, effectively transmitting 2 bits every 6 dimensions, but the advantage is that this can be layered on top of existing QAM constellations like the previous examples. Using the 4QAM seed we can get a constellation such as this:
 
-![6d16QAMbias](./img/6d16QAMbias.png)
+![6d16QAMbias](./img/sixDcase.png)
 
-
-You may notice this mapping looks a lot like 64QAM, so our 14bit/6D constellation could be interpreted as a block encoding on 18bit/6D of 64QAM with rate of 14/18=7/9. However unlike block codes that primarily use hamming distance to decode a transmitted signal this mapping is structured in a way that would allow efficient and more optimal decoding as I will demonstrate below.
+You may notice this mapping looks a lot like 16QAM, so our 8bit/6D constellation could be interpreted as a block encoding on 12bit/6D of 16QAM with rate of 8/12=2/3. However unlike block codes that primarily use hamming distance to decode a transmitted signal this mapping is structured in a way that would allow efficient and more optimal decoding as I will demonstrate below.
 
 For the demonstration I will use 4QAM as our seed instead of 16QAM we get a smaller constellation which can simplify the example.
 
@@ -80,14 +77,14 @@ For the demonstration I will use 4QAM as our seed instead of 16QAM we get a smal
 Our transmission strategy will send 8 bits, the first 6 get mapped to each dimension individually multiplied by 2, then the last 2 are used to generate a bias vector using the above linear code and added to the coordinate found by the first 6 bits. So the message (11111100) correspond to the blue point at (3,3,3,3,3,3).
 
 So we will treat this as a 16QAM constellation with grey mapping (**TODO: add binary labels to the points**) 
-If our grey mapping maps the vector coordinates to bit sequences: 0->00, 1->01, 2->11, 3->10. so our codeword at (3,3,3,3,3,3) corresponds to the 16QAM message of [1111 1111 1111].
+If our grey mapping maps the vector coordinates to bit sequences: 0->00, 1->01, 2->11, 3->10. so our codeword at (3,3,3,3,3,3)/2 corresponds to the 16QAM message of [1111 1111 1111].
 
-Then suppose our noise vector is [0, +0.6, +0.1, +0.6, 0, +0.6] resulting in the purple point in the above figure. Decoding as 16QAM it will be very certain the byte sequence is 1110 1110 1110, this is not a valid codeword but the middle graph's X position (dimension 3) can vary to get 2 other valid codewords that are both green.
+Then suppose our noise vector is [0, +0.3, +0.05, +0.3, 0, +0.3] resulting in the purple point in the above figure. Decoding as 16QAM it will be very certain the byte sequence is 1110 1110 1110, this is not a valid codeword but the middle graph's X position (dimension 3) can vary to get 2 other valid codewords that are both green.
 
-- 1110 0110 1110 at coordinate (2,3, 1,3, 2,3)
-- 1110 1010 1110 at coordinate (2,3, 3,3, 2,3)
+- 1110 0110 1110 at coordinate (2,3, 1,3, 2,3)/2
+- 1110 1010 1110 at coordinate (2,3, 3,3, 2,3)/2
 
-Both of these codewords only vary from the received code by only 2 bits while the original transmitted message differs by 3 bits, however the euclidean distance to the original codeword is closer than both green points. If we calculate the distance from the point (2,3,3,3,2,3) we get:
+Both of these codewords only vary from the received code by only 2 bits while the original transmitted message differs by 3 bits, however the euclidean distance to the original codeword is closer than both green points. If we calculate the distance from the point (2,3,3,3,2,3)/2 we get:
 
 ```
    (2, 3  , 3  , 3  , 2, 3) 
@@ -100,7 +97,20 @@ Where as the length of the noise vector to the original message is sqrt(3*0.6^2 
 
 ### biassing in higher dimensions
 
-In any arbitrary dimensionality N, we can choose a QAM seed and find a linear binary code with minimum hamming distance 4, so a code with parameters (N,k,4) where k is as high as possible (or following an easy to decode code structure like Reed-Muller codes) then we can compose them to form a new constellation where most of the bits are encoded directly as QAM and the rest generate a bias vector where each coordinate is half the length of the original QAM (we've been assuming the QAM is always 2 units and bias is 1 unit previously but this isn't even strictly necessary) to generate valid codewords. When decoding the bias structure essentially increases the QAM modulation by 1.
+In any arbitrary dimensionality N, we can find a linear binary code with minimum hamming distance 4 - a code with parameters (N,k,4) for some k - then we can make a new transmission scheme of N+k bits where the first N bits are mapped to each dimension directly (coordinate 0 or 1) and the remaining k bits are fed through the (N,k,4) binary code and the resulting binary vector is halved (mapped to coordinates 0 and 1/2) and added to the coordinate from the N bits. this will produce a structure much like a block code applied to 16QAM.
+
+For instance in 8 dimensions we can use this (8,4,4) code:
+
+- 1000 0111
+- 0100 1011
+- 0010 1101
+- 0001 1110
+
+to produce a 12 bit / 8D code such as this:
+
+![8D case with different colours and shapes](img/8d.png)
+
+The first 8 bits of a message map directly to shifting each of the 8 dimensions, then the first 2 bits of the modulation determine the color (00=red, 01=blue, 10=orange, 11=green) and the second 2 bits determine shape (00=circle, 01=star, 10=square, 11=diamond) to determine where the specific codeword that is transmitted is located.
 
 ## Higher order modulation.
 

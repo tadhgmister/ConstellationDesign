@@ -22,17 +22,23 @@ class HighDimScatter:
             ax.set_ylabel(f'Dimension {2 * idx + 2}')
             #ax.set_title(f'Dim {2 * idx + 1} and {2 * idx + 2}')
             ax.axis('equal')
-            ax.axis([min(grid) - 1, max(grid) + 1] * 2)
+            ax.axis([min(grid)-0.5, max(grid)+0.5] * 2)
+            #ax.margins(1)
             ax.grid(True)
-            ax.set_xticks(grid)
-            ax.set_yticks(grid)
+            if isinstance(grid, dict):
+                ax.set_xticks(list(grid.keys()), list(grid.values()))
+                ax.set_yticks(list(grid.keys()), list(grid.values()))
+            else:
+                ax.set_xticks(grid)
+                ax.set_yticks(grid)
 
     def scatter(self, points, **kwargs):
+        kwargs.setdefault("marker", "o")
         coord_vectors = list(zip(*points))
-
+        assert len(coord_vectors) == self.num_dimensions, "scattering {} dimensions".format(len(coord_vectors))
         # Loop over subplots and call scatter on each one
         for idx, ax in enumerate(self.axs):
-            ax.scatter(coord_vectors[2 * idx], coord_vectors[2 * idx + 1], **kwargs)
+            ax.plot(coord_vectors[2 * idx], coord_vectors[2 * idx + 1], linestyle="", **kwargs)
 
     def save(self):
         self.fig.savefig(stdout.buffer, format='png')
